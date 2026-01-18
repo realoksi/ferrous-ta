@@ -21,26 +21,28 @@ pub trait GuaranteedMovingAverage<T>: MovingAverage<T> {
     fn push(&mut self, value: T) -> T;
 }
 
+/// Blanket trait for number-like type constraints.
 pub trait Number:
-Copy
-+ Default
-+ Add<Output=Self>
-+ Sub<Output=Self>
-+ Mul<Output=Self>
-+ Div<Output=Self>
-+ FromPrimitive
-{}
-
-impl<T> Number for T
-where
-    T: Copy
+    Copy
     + Default
-    + Add<Output=Self>
-    + Sub<Output=Self>
-    + Mul<Output=Self>
-    + Div<Output=Self>
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
     + FromPrimitive
-{}
+{
+}
+
+impl<T> Number for T where
+    T: Copy
+        + Default
+        + Add<Output = Self>
+        + Sub<Output = Self>
+        + Mul<Output = Self>
+        + Div<Output = Self>
+        + FromPrimitive
+{
+}
 
 pub struct CMA<T> {
     pub(crate) count: usize,

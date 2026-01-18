@@ -98,10 +98,10 @@ pub struct DEMA<T> {
 }
 
 impl<T: Number> DEMA<T> {
-    pub fn new(periods: usize) -> Self {
+    pub fn new(periods: usize, first: Option<T>, smoothing_constant: Option<usize>) -> Self {
         Self {
-            ema_1: EMA::<T>::new(periods, None, None),
-            ema_2: EMA::<T>::new(periods, None, None),
+            ema_1: EMA::<T>::new(periods, first, smoothing_constant),
+            ema_2: EMA::<T>::new(periods, None, smoothing_constant),
             two_as_t: T::from_i32(2).unwrap(),
         }
     }
@@ -231,11 +231,11 @@ pub struct TEMA<T> {
 }
 
 impl<T: Number> TEMA<T> {
-    pub fn new(periods: usize) -> Self {
+    pub fn new(periods: usize, first: Option<T>, smoothing_constant: Option<usize>) -> Self {
         Self {
-            ema_1: EMA::<T>::new(periods, None, None),
-            ema_2: EMA::<T>::new(periods, None, None),
-            ema_3: EMA::<T>::new(periods, None, None),
+            ema_1: EMA::<T>::new(periods, first, smoothing_constant),
+            ema_2: EMA::<T>::new(periods, None, smoothing_constant),
+            ema_3: EMA::<T>::new(periods, None, smoothing_constant),
             three_as_t: T::from_i32(3).unwrap(),
         }
     }

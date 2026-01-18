@@ -44,6 +44,19 @@ impl<T> Number for T where
 {
 }
 
+/// # Cumulative Moving Average
+/// Computes the arithmetic mean of all values ingested so far by incrementally updating an internal
+/// accumulator.
+///
+/// # Example
+/// ```
+/// use ferrous_ta::*;
+///
+/// let mut cma = CMA::new();
+///
+/// assert_eq!(cma.push(0.5), 0.5);
+/// assert_eq!(cma.push(5.0), 2.75);
+/// ```
 pub struct CMA<T> {
     pub(crate) count: usize,
     pub(crate) avg: T,

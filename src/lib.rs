@@ -3,15 +3,21 @@
 use core::ops::{Add, Div, Mul, Sub};
 use num_traits::FromPrimitive;
 
+/// Base trait for stateful moving average implementations.
 pub trait MovingAverage<T> {
+    /// Resets internal state to its initial values.
     fn reset(&mut self);
 }
 
+/// Extension trait for moving averages with **conditional** output.
 pub trait OptionalMovingAverage<T>: MovingAverage<T> {
+    /// Returns `None` until sufficient state has been accumulated.
     fn push_opt(&mut self, value: T) -> Option<T>;
 }
 
+/// Extension trait for moving averages with **unconditional** output.
 pub trait GuaranteedMovingAverage<T>: MovingAverage<T> {
+    /// Always returns a value for each input.
     fn push(&mut self, value: T) -> T;
 }
 
@@ -33,7 +39,7 @@ where
     + Sub<Output=Self>
     + Mul<Output=Self>
     + Div<Output=Self>
-    + FromPrimitive,
+    + FromPrimitive
 {}
 
 pub struct CMA<T> {

@@ -125,6 +125,19 @@ impl<T: Number> GuaranteedMovingAverage<T> for DEMA<T> {
     }
 }
 
+/// # Exponential Moving Average
+/// Computes a weighted moving average using exponential decay, emphasizing recent values.
+///
+/// # Example
+/// ```
+/// use ferrous_ta::*;
+///
+/// let mut ema = EMA::new(3, None, None);
+///
+/// assert_eq!(ema.push(1.0), 1.0);
+/// assert_eq!(ema.push(2.0), 1.5);
+/// assert_eq!(ema.push(3.0), 2.25);
+/// ```
 pub struct EMA<T> {
     pub(crate) alpha: T,
     pub(crate) beta: T,

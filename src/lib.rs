@@ -1,3 +1,8 @@
+//! # Description
+//!
+//! A generic `no_std` compatible technical analysis library. Assumes users are familiar with the
+//! concepts behind the implemented indicators.
+
 #![no_std]
 
 use core::ops::{Add, Div, Mul, Sub};
@@ -9,16 +14,22 @@ pub trait MovingAverage<T> {
     fn reset(&mut self);
 }
 
-/// Extension trait for moving averages with **conditional** output.
+/// Extension trait for moving averages with **conditional output**.
 pub trait OptionalMovingAverage<T>: MovingAverage<T> {
     /// Returns `None` until sufficient state has been accumulated.
     fn push_opt(&mut self, value: T) -> Option<T>;
 }
 
-/// Extension trait for moving averages with **unconditional** output.
+/// Extension trait for moving averages with **unconditional output**.
 pub trait GuaranteedMovingAverage<T>: MovingAverage<T> {
     /// Always returns a value for each input.
     fn push(&mut self, value: T) -> T;
+}
+
+/// Base trait for oscillator implementations.
+pub trait Oscillator<T> {
+    /// Resets internal state to its initial values.
+    fn reset(&mut self);
 }
 
 /// Blanket trait for number-like type constraints.
@@ -44,19 +55,10 @@ impl<T> Number for T where
 {
 }
 
-/// # Cumulative Moving Average
+/// # Cumulative moving average
+///
 /// Computes the arithmetic mean of all values ingested so far by incrementally updating an internal
 /// accumulator.
-///
-/// # Example
-/// ```
-/// use ferrous_ta::*;
-///
-/// let mut cma = CMA::new();
-///
-/// assert_eq!(cma.push(0.5), 0.5);
-/// assert_eq!(cma.push(5.0), 2.75);
-/// ```
 pub struct CMA<T> {
     pub(crate) count: usize,
     pub(crate) avg: T,
@@ -91,6 +93,7 @@ impl<T: Number> GuaranteedMovingAverage<T> for CMA<T> {
     }
 }
 
+/// # Double exponential moving average
 pub struct DEMA<T> {
     pub(crate) ema_1: EMA<T>,
     pub(crate) ema_2: EMA<T>,
@@ -125,7 +128,7 @@ impl<T: Number> GuaranteedMovingAverage<T> for DEMA<T> {
     }
 }
 
-/// # Exponential Moving Average
+/// # Exponential moving average
 /// Computes a weighted moving average using exponential decay, emphasizing recent values.
 ///
 /// # Example
@@ -182,6 +185,7 @@ impl<T: Number> GuaranteedMovingAverage<T> for EMA<T> {
     }
 }
 
+/// # Simple moving average
 pub struct SMA<T, const N: usize> {
     pub(crate) buf: [T; N],
     pub(crate) count: usize,
@@ -236,6 +240,7 @@ impl<T: Number, const N: usize> OptionalMovingAverage<T> for SMA<T, N> {
     }
 }
 
+/// # Triple exponential moving average
 pub struct TEMA<T> {
     pub(crate) ema_1: EMA<T>,
     pub(crate) ema_2: EMA<T>,
@@ -271,5 +276,42 @@ impl<T: Number> GuaranteedMovingAverage<T> for TEMA<T> {
         let e3 = self.ema_3.push(e2);
 
         self.three_as_t * e1 - self.three_as_t * e2 + e3
+    }
+}
+
+/// # Moving Average Convergence Divergence
+pub struct MACD<T> {
+    pub(crate) fast_ema: EMA<T>,
+    pub(crate) slow_ema: EMA<T>,
+    pub(crate) signal_ema: EMA<T>,
+}
+
+impl<T: Number> MACD<T> {
+    pub fn new(fast_periods: usize, slow_periods: usize, signal_periods: usize) -> Self {
+        // TODO: pass through EMA construction arguments
+
+        assert!(fast_periods < slow_periods);
+
+        Self {
+            fast_ema: EMA::<T>::new(fast_periods, None, None),
+            slow_ema: EMA::<T>::new(slow_periods, None, None),
+            signal_ema: EMA::<T>::new(signal_periods, None, None),
+        }
+    }
+
+    pub fn push(&mut self, value: T) -> [T; 3] {
+        let macd = self.fast_ema.push(value) - self.slow_ema.push(value);
+
+        let signal = self.signal_ema.push(macd);
+
+        [macd, signal, macd - signal]
+    }
+}
+
+impl<T: Number> Oscillator<T> for MACD<T> {
+    fn reset(&mut self) {
+        self.fast_ema.reset();
+        self.slow_ema.reset();
+        self.signal_ema.reset();
     }
 }

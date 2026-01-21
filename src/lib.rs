@@ -10,20 +10,8 @@ use num_traits::FromPrimitive;
 
 /// Base trait for stateful moving average implementations.
 pub trait MovingAverage<T> {
-    /// Resets internal state to its initial values.
+    fn push(&mut self, value: T) -> Option<T>;
     fn reset(&mut self);
-}
-
-/// Extension trait for moving averages with **conditional output**.
-pub trait OptionalMovingAverage<T>: MovingAverage<T> {
-    /// Returns `None` until sufficient state has been accumulated.
-    fn push_opt(&mut self, value: T) -> Option<T>;
-}
-
-/// Extension trait for moving averages with **unconditional output**.
-pub trait GuaranteedMovingAverage<T>: MovingAverage<T> {
-    /// Always returns a value for each input.
-    fn push(&mut self, value: T) -> T;
 }
 
 /// Base trait for oscillator implementations.
@@ -75,21 +63,19 @@ impl<T: Number> CMA<T> {
 
 impl<T: Number> MovingAverage<T> for CMA<T> {
     #[inline]
-    fn reset(&mut self) {
-        self.count = 0;
-        self.avg = T::default();
-    }
-}
-
-impl<T: Number> GuaranteedMovingAverage<T> for CMA<T> {
-    #[inline]
-    fn push(&mut self, value: T) -> T {
+    fn push(&mut self, value: T) -> Option<T> {
         self.count = self.count + 1;
 
         let diff = value - self.avg;
         self.avg = self.avg + (diff / T::from_usize(self.count).unwrap());
 
-        self.avg
+        Some(self.avg)
+    }
+
+    #[inline]
+    fn reset(&mut self) {
+        self.count = 0;
+        self.avg = T::default();
     }
 }
 
@@ -112,19 +98,17 @@ impl<T: Number> DEMA<T> {
 
 impl<T: Number> MovingAverage<T> for DEMA<T> {
     #[inline]
+    fn push(&mut self, value: T) -> Option<T> {
+        let e1 = self.ema_1.push(value).unwrap();
+        let e2 = self.ema_2.push(e1).unwrap();
+
+        Some(self.two_as_t * e1 - e2)
+    }
+
+    #[inline]
     fn reset(&mut self) {
         self.ema_1.reset();
         self.ema_2.reset();
-    }
-}
-
-impl<T: Number> GuaranteedMovingAverage<T> for DEMA<T> {
-    #[inline]
-    fn push(&mut self, value: T) -> T {
-        let e1 = self.ema_1.push(value);
-        let e2 = self.ema_2.push(e1);
-
-        self.two_as_t * e1 - e2
     }
 }
 
@@ -164,24 +148,20 @@ impl<T: Number> EMA<T> {
 
 impl<T: Number> MovingAverage<T> for EMA<T> {
     #[inline]
-    fn reset(&mut self) {
-        self.last = None;
-    }
-}
-
-impl<T: Number> GuaranteedMovingAverage<T> for EMA<T> {
-    #[inline]
-    fn push(&mut self, value: T) -> T {
+    fn push(&mut self, value: T) -> Option<T> {
         if let Some(last) = self.last {
             let next = self.alpha * value + self.beta * last;
 
             self.last = Some(next);
-            next
         } else {
             self.last = Some(value);
-
-            value
         }
+
+        self.last
+    }
+    #[inline]
+    fn reset(&mut self) {
+        self.last = None;
     }
 }
 
@@ -210,17 +190,7 @@ impl<T: Number, const N: usize> SMA<T, N> {
 
 impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
     #[inline]
-    fn reset(&mut self) {
-        self.buf = [T::default(); N];
-        self.index = 0;
-        self.rolling_sum = T::default();
-        self.count = 0;
-    }
-}
-
-impl<T: Number, const N: usize> OptionalMovingAverage<T> for SMA<T, N> {
-    #[inline]
-    fn push_opt(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: T) -> Option<T> {
         if self.count < N {
             self.count += 1;
         }
@@ -237,6 +207,13 @@ impl<T: Number, const N: usize> OptionalMovingAverage<T> for SMA<T, N> {
         } else {
             Some(self.rolling_sum * self.divisor)
         }
+    }
+    #[inline]
+    fn reset(&mut self) {
+        self.buf = [T::default(); N];
+        self.index = 0;
+        self.rolling_sum = T::default();
+        self.count = 0;
     }
 }
 
@@ -261,6 +238,14 @@ impl<T: Number> TEMA<T> {
 
 impl<T: Number> MovingAverage<T> for TEMA<T> {
     #[inline]
+    fn push(&mut self, value: T) -> Option<T> {
+        let e1 = self.ema_1.push(value).unwrap();
+        let e2 = self.ema_2.push(e1).unwrap();
+        let e3 = self.ema_3.push(e2).unwrap();
+
+        Some(self.three_as_t * e1 - self.three_as_t * e2 + e3)
+    }
+    #[inline]
     fn reset(&mut self) {
         self.ema_1.reset();
         self.ema_2.reset();
@@ -268,18 +253,7 @@ impl<T: Number> MovingAverage<T> for TEMA<T> {
     }
 }
 
-impl<T: Number> GuaranteedMovingAverage<T> for TEMA<T> {
-    #[inline]
-    fn push(&mut self, value: T) -> T {
-        let e1 = self.ema_1.push(value);
-        let e2 = self.ema_2.push(e1);
-        let e3 = self.ema_3.push(e2);
-
-        self.three_as_t * e1 - self.three_as_t * e2 + e3
-    }
-}
-
-/// # Moving Average Convergence Divergence
+/// # Moving average convergence divergence
 pub struct MACD<T> {
     pub(crate) fast_ema: EMA<T>,
     pub(crate) slow_ema: EMA<T>,
@@ -300,9 +274,9 @@ impl<T: Number> MACD<T> {
     }
 
     pub fn push(&mut self, value: T) -> [T; 3] {
-        let macd = self.fast_ema.push(value) - self.slow_ema.push(value);
+        let macd = self.fast_ema.push(value).unwrap() - self.slow_ema.push(value).unwrap();
 
-        let signal = self.signal_ema.push(macd);
+        let signal = self.signal_ema.push(macd).unwrap();
 
         [macd, signal, macd - signal]
     }

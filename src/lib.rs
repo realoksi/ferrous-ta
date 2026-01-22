@@ -16,6 +16,8 @@ pub trait MovingAverage<T> {
 
 /// Base trait for oscillator implementations.
 pub trait Oscillator<T> {
+    type Output;
+    fn push(&mut self, value: T) -> Self::Output;
     /// Resets internal state to its initial values.
     fn reset(&mut self);
 }
@@ -121,9 +123,9 @@ impl<T: Number> MovingAverage<T> for DEMA<T> {
 ///
 /// let mut ema = EMA::new(3, None, None);
 ///
-/// assert_eq!(ema.push(1.0), 1.0);
-/// assert_eq!(ema.push(2.0), 1.5);
-/// assert_eq!(ema.push(3.0), 2.25);
+/// assert_eq!(ema.push(1.0), Some(1.0));
+/// assert_eq!(ema.push(2.0), Some(1.5));
+/// assert_eq!(ema.push(3.0), Some(2.25));
 /// ```
 pub struct EMA<T> {
     pub(crate) alpha: T,
@@ -272,17 +274,19 @@ impl<T: Number> MACD<T> {
             signal_ema: EMA::<T>::new(signal_periods, None, None),
         }
     }
+}
 
-    pub fn push(&mut self, value: T) -> [T; 3] {
+impl<T: Number> Oscillator<T> for MACD<T> {
+    type Output = [T; 3];
+
+    fn push(&mut self, value: T) -> Self::Output {
         let macd = self.fast_ema.push(value).unwrap() - self.slow_ema.push(value).unwrap();
 
         let signal = self.signal_ema.push(macd).unwrap();
 
         [macd, signal, macd - signal]
     }
-}
 
-impl<T: Number> Oscillator<T> for MACD<T> {
     fn reset(&mut self) {
         self.fast_ema.reset();
         self.slow_ema.reset();

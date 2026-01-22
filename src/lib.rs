@@ -10,7 +10,8 @@ use num_traits::FromPrimitive;
 
 /// Base trait for stateful moving average implementations.
 pub trait MovingAverage<T> {
-    fn push(&mut self, value: T) -> Option<T>;
+    type Output;
+    fn push(&mut self, value: T) -> Self::Output;
     fn reset(&mut self);
 }
 
@@ -64,8 +65,10 @@ impl<T: Number> CMA<T> {
 }
 
 impl<T: Number> MovingAverage<T> for CMA<T> {
+    type Output = Option<T>;
+
     #[inline]
-    fn push(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: T) -> Self::Output {
         self.count = self.count + 1;
 
         let diff = value - self.avg;
@@ -99,8 +102,9 @@ impl<T: Number> DEMA<T> {
 }
 
 impl<T: Number> MovingAverage<T> for DEMA<T> {
+    type Output = Option<T>;
     #[inline]
-    fn push(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: T) -> Self::Output {
         let e1 = self.ema_1.push(value).unwrap();
         let e2 = self.ema_2.push(e1).unwrap();
 
@@ -149,8 +153,9 @@ impl<T: Number> EMA<T> {
 }
 
 impl<T: Number> MovingAverage<T> for EMA<T> {
+    type Output = Option<T>;
     #[inline]
-    fn push(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: T) -> Self::Output {
         if let Some(last) = self.last {
             let next = self.alpha * value + self.beta * last;
 
@@ -191,8 +196,9 @@ impl<T: Number, const N: usize> SMA<T, N> {
 }
 
 impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
+    type Output = Option<T>;
     #[inline]
-    fn push(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: T) -> Self::Output{
         if self.count < N {
             self.count += 1;
         }
@@ -239,6 +245,7 @@ impl<T: Number> TEMA<T> {
 }
 
 impl<T: Number> MovingAverage<T> for TEMA<T> {
+    type Output = Option<T>;
     #[inline]
     fn push(&mut self, value: T) -> Option<T> {
         let e1 = self.ema_1.push(value).unwrap();

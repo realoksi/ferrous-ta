@@ -12,6 +12,7 @@ use num_traits::FromPrimitive;
 pub trait MovingAverage<T> {
     type Output;
     fn push(&mut self, value: T) -> Self::Output;
+    /// Resets internal state to its initial values.
     fn reset(&mut self);
 }
 
@@ -198,7 +199,7 @@ impl<T: Number, const N: usize> SMA<T, N> {
 impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
     type Output = Option<T>;
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output{
+    fn push(&mut self, value: T) -> Self::Output {
         if self.count < N {
             self.count += 1;
         }
@@ -270,15 +271,19 @@ pub struct MACD<T> {
 }
 
 impl<T: Number> MACD<T> {
-    pub fn new(fast_periods: usize, slow_periods: usize, signal_periods: usize) -> Self {
-        // TODO: pass through EMA construction arguments
-
+    pub fn new(
+        fast_periods: usize,
+        slow_periods: usize,
+        signal_periods: usize,
+        first: Option<T>,
+        smoothing_constant: Option<usize>,
+    ) -> Self {
         assert!(fast_periods < slow_periods);
 
         Self {
-            fast_ema: EMA::<T>::new(fast_periods, None, None),
-            slow_ema: EMA::<T>::new(slow_periods, None, None),
-            signal_ema: EMA::<T>::new(signal_periods, None, None),
+            fast_ema: EMA::<T>::new(fast_periods, first, smoothing_constant),
+            slow_ema: EMA::<T>::new(slow_periods, None, smoothing_constant),
+            signal_ema: EMA::<T>::new(signal_periods, None, smoothing_constant),
         }
     }
 }

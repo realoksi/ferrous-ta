@@ -34,6 +34,7 @@ pub trait Number:
     + Div<Output = Self>
     + FromPrimitive
 {
+    // Should we constrain to arbitrary number types, or maybe prefer float-likes?
 }
 
 impl<T> Number for T where
@@ -305,3 +306,58 @@ impl<T: Number> Oscillator<T> for MACD<T> {
         self.signal_ema.reset();
     }
 }
+
+// TODO: Use the following list to track and prioritize new implementations - from highest priority
+// to lowest.
+
+// 1.
+/// # Weighted moving average
+pub struct WMA;
+/// # Relative strength index
+pub struct RSI;
+/// # Bollinger bands
+pub struct BBANDS;
+/// # Average true range
+pub struct ATR;
+/// # Stochastic oscillator
+pub struct STOCH;
+/// # Average directional index
+pub struct ADX;
+/// # Volume weighted average price
+pub struct VWAP;
+
+// 2.
+/// # Keltner Channels
+pub struct KC;
+/// # Accumulation/Distribution
+pub struct AD;
+/// # Chaikin money flow
+pub struct CMF;
+/// # Ultimate oscillator
+pub struct UO;
+/// # Triple exponential average
+pub struct TRIX;
+/// # Ichimoku cloud
+pub struct ICHIMOKU;
+/// # Aroon
+pub struct AROON;
+/// # Commodity channel index
+pub struct CCI;
+/// # Williams %r
+pub struct WR;
+/// # Rate of change
+pub struct ROC;
+/// # On balance volume
+pub struct OBV;
+/// # Money flow index
+pub struct MFI;
+/// # Parabolic stop and reverse
+pub struct SAR;
+/// # Donchian channels
+pub struct DONCH;
+
+// 3.
+/// # Kaufmans adaptive moving average
+pub struct KAMA;
+/// # Vortex indicator
+pub struct VORTEX;

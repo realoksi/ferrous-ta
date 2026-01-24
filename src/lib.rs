@@ -5,7 +5,7 @@
 
 #![no_std]
 
-use core::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub};
 use num_traits::FromPrimitive;
 
 /// Base trait for stateful moving average implementations.
@@ -28,6 +28,8 @@ pub trait Oscillator<T> {
 pub trait Number:
     Copy
     + Default
+    + PartialOrd
+    + Neg<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
@@ -40,6 +42,8 @@ pub trait Number:
 impl<T> Number for T where
     T: Copy
         + Default
+        + PartialOrd
+        + Neg<Output = Self>
         + Add<Output = Self>
         + Sub<Output = Self>
         + Mul<Output = Self>
@@ -105,6 +109,7 @@ impl<T: Number> DEMA<T> {
 
 impl<T: Number> MovingAverage<T> for DEMA<T> {
     type Output = Option<T>;
+
     #[inline]
     fn push(&mut self, value: T) -> Self::Output {
         let e1 = self.ema_1.push(value).unwrap();
@@ -156,6 +161,7 @@ impl<T: Number> EMA<T> {
 
 impl<T: Number> MovingAverage<T> for EMA<T> {
     type Output = Option<T>;
+
     #[inline]
     fn push(&mut self, value: T) -> Self::Output {
         if let Some(last) = self.last {
@@ -168,6 +174,7 @@ impl<T: Number> MovingAverage<T> for EMA<T> {
 
         self.last
     }
+
     #[inline]
     fn reset(&mut self) {
         self.last = None;
@@ -199,6 +206,7 @@ impl<T: Number, const N: usize> SMA<T, N> {
 
 impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
     type Output = Option<T>;
+
     #[inline]
     fn push(&mut self, value: T) -> Self::Output {
         if self.count < N {
@@ -218,6 +226,7 @@ impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
             Some(self.rolling_sum * self.divisor)
         }
     }
+
     #[inline]
     fn reset(&mut self) {
         self.buf = [T::default(); N];
@@ -248,6 +257,7 @@ impl<T: Number> TEMA<T> {
 
 impl<T: Number> MovingAverage<T> for TEMA<T> {
     type Output = Option<T>;
+
     #[inline]
     fn push(&mut self, value: T) -> Option<T> {
         let e1 = self.ema_1.push(value).unwrap();
@@ -292,6 +302,7 @@ impl<T: Number> MACD<T> {
 impl<T: Number> Oscillator<T> for MACD<T> {
     type Output = [T; 3];
 
+    #[inline]
     fn push(&mut self, value: T) -> Self::Output {
         let macd = self.fast_ema.push(value).unwrap() - self.slow_ema.push(value).unwrap();
 
@@ -300,6 +311,7 @@ impl<T: Number> Oscillator<T> for MACD<T> {
         [macd, signal, macd - signal]
     }
 
+    #[inline]
     fn reset(&mut self) {
         self.fast_ema.reset();
         self.slow_ema.reset();
@@ -307,14 +319,187 @@ impl<T: Number> Oscillator<T> for MACD<T> {
     }
 }
 
-// TODO: Use the following list to track and prioritize new implementations - from highest priority
-// to lowest.
-
-// 1.
 /// # Weighted moving average
-pub struct WMA;
+pub struct WMA<T, const N: usize> {
+    pub(crate) buf: [T; N],
+    pub(crate) count: usize,
+    pub(crate) divisor: T,
+    pub(crate) index: usize,
+    pub(crate) rolling_sum: T,
+    pub(crate) rolling_weighted_sum: T,
+}
+
+impl<T: Number, const N: usize> WMA<T, N> {
+    pub fn new() -> Self {
+        assert!(N > 0);
+
+        Self {
+            buf: [T::default(); N],
+            count: 0,
+            divisor: T::from_usize(1).unwrap() / T::from_usize(N * (N + 1) / 2).unwrap(),
+            index: 0,
+            rolling_sum: T::default(),
+            rolling_weighted_sum: T::default(),
+        }
+    }
+}
+
+impl<T: Number, const N: usize> MovingAverage<T> for WMA<T, N> {
+    type Output = Option<T>;
+
+    #[inline]
+    fn push(&mut self, value: T) -> Self::Output {
+        if self.count < N {
+            self.count += 1;
+        }
+
+        let last_value = self.buf[self.index];
+
+        self.rolling_weighted_sum =
+            self.rolling_weighted_sum - self.rolling_sum + value * T::from_usize(N).unwrap();
+
+        self.buf[self.index] = value;
+        self.rolling_sum = self.rolling_sum - last_value + value;
+
+        self.index = (self.index + 1) % N;
+
+        if self.count < N {
+            None
+        } else {
+            Some(self.rolling_weighted_sum * self.divisor)
+        }
+    }
+
+    #[inline]
+    fn reset(&mut self) {
+        self.buf = [T::default(); N];
+        self.count = 0;
+        self.index = 0;
+        self.rolling_sum = T::default();
+        self.rolling_weighted_sum = T::default();
+    }
+}
+
 /// # Relative strength index
-pub struct RSI;
+pub struct RSI<T> {
+    pub(crate) avg_gain: T,
+    pub(crate) avg_loss: T,
+    pub(crate) count: usize,
+    pub(crate) fifty_as_t: T,
+    pub(crate) last: Option<T>,
+    pub(crate) one_hundred_as_t: T,
+    pub(crate) periods: usize,
+    pub(crate) periods_as_t: T,
+    pub(crate) periods_minus_one_as_t: T,
+    pub(crate) sum_gain: T,
+    pub(crate) sum_loss: T,
+    pub(crate) zero_as_t: T,
+}
+
+impl<T: Number> RSI<T> {
+    pub fn new(periods: usize) -> Self {
+        assert!(periods > 0);
+
+        Self {
+            avg_gain: T::default(),
+            avg_loss: T::default(),
+            count: 0,
+            fifty_as_t: T::from_usize(50).unwrap(),
+            last: None,
+            one_hundred_as_t: T::from_usize(100).unwrap(),
+            periods,
+            periods_as_t: T::from_usize(periods).unwrap(),
+            periods_minus_one_as_t: T::from_usize(periods - 1).unwrap(),
+            sum_gain: T::default(),
+            sum_loss: T::default(),
+            zero_as_t: T::from_usize(0).unwrap(),
+        }
+    }
+}
+
+#[inline]
+fn partial_max<T: PartialOrd>(a: T, b: T) -> T {
+    if a > b { a } else { b }
+}
+
+impl<T: Number> Oscillator<T> for RSI<T> {
+    type Output = Option<T>;
+
+    #[inline]
+    fn push(&mut self, value: T) -> Self::Output {
+        if let Some(last) = self.last {
+            let diff = value - last;
+            let gain = partial_max(diff, self.zero_as_t);
+            let loss = partial_max(-diff, self.zero_as_t);
+
+            if self.count < self.periods {
+                self.sum_gain = self.sum_gain + gain;
+                self.sum_loss = self.sum_loss + loss;
+                self.count += 1;
+
+                if self.count == self.periods {
+                    self.avg_gain = self.sum_gain / self.periods_as_t;
+                    self.avg_loss = self.sum_loss / self.periods_as_t;
+                } else {
+                    self.last = Some(value);
+
+                    return None;
+                }
+            } else {
+                self.avg_gain =
+                    (self.avg_gain * self.periods_minus_one_as_t + gain) / self.periods_as_t;
+                self.avg_loss =
+                    (self.avg_loss * self.periods_minus_one_as_t + loss) / self.periods_as_t;
+            }
+
+            let rsi: T = if self.avg_gain == self.zero_as_t && self.avg_loss == self.zero_as_t {
+                self.fifty_as_t
+            } else {
+                self.one_hundred_as_t * self.avg_gain / (self.avg_gain + self.avg_loss)
+            };
+
+            self.last = Some(value);
+
+            Some(rsi)
+        } else {
+            self.last = Some(value);
+
+            None
+        }
+    }
+
+    #[inline]
+    fn reset(&mut self) {
+        self.count = 0;
+        self.avg_gain = T::default();
+        self.avg_loss = T::default();
+        self.sum_gain = T::default();
+        self.sum_loss = T::default();
+        self.last = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern crate std;
+
+    use std::print;
+
+    #[test]
+    fn test_rsi() {
+        const SAMPLE: [f64; 10] = [44.0, 44.5, 45.0, 44.8, 45.2, 45.4, 45.1, 44.9, 45.3, 45.5];
+        let mut rsi = RSI::new(5);
+
+        for i in SAMPLE {
+            if let Some(a) = rsi.push(i) {
+                print!("{}, ", a);
+            }
+        }
+    }
+}
+
 /// # Bollinger bands
 pub struct BBANDS;
 /// # Average true range

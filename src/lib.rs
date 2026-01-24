@@ -427,7 +427,7 @@ impl<T: Number> Oscillator<T> for RSI<T> {
 
     #[inline]
     fn push(&mut self, value: T) -> Self::Output {
-        if let Some(last) = self.last {
+        let result = if let Some(last) = self.last {
             let diff = value - last;
             let gain = partial_max(diff, self.zero_as_t);
             let loss = partial_max(-diff, self.zero_as_t);
@@ -457,15 +457,14 @@ impl<T: Number> Oscillator<T> for RSI<T> {
             } else {
                 self.one_hundred_as_t * self.avg_gain / (self.avg_gain + self.avg_loss)
             };
-
-            self.last = Some(value);
-
             Some(rsi)
         } else {
-            self.last = Some(value);
-
             None
-        }
+        };
+
+        self.last = Some(value);
+
+        result
     }
 
     #[inline]

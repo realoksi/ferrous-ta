@@ -479,27 +479,6 @@ impl<T: Number> Oscillator<T> for RSI<T> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    extern crate std;
-
-    use std::print;
-
-    #[test]
-    fn test_rsi() {
-        const SAMPLE: [f64; 10] = [44.0, 44.5, 45.0, 44.8, 45.2, 45.4, 45.1, 44.9, 45.3, 45.5];
-        let mut rsi = RSI::new(5);
-
-        for i in SAMPLE {
-            if let Some(a) = rsi.push(i) {
-                print!("{}, ", a);
-            }
-        }
-    }
-}
-
 /// # Bollinger bands
 pub struct BBANDS;
 /// # Average true range

@@ -8,7 +8,7 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 use num_traits::FromPrimitive;
 
-/// Base trait for stateful moving average implementations.
+/// Base trait for moving average indicators.
 pub trait MovingAverage {
     type Input;
     type Output;
@@ -17,7 +17,7 @@ pub trait MovingAverage {
     fn reset(&mut self);
 }
 
-/// Base trait for oscillator implementations.
+/// Base trait for oscillator indicators.
 pub trait Oscillator {
     type Input;
     type Output;
@@ -26,7 +26,7 @@ pub trait Oscillator {
     fn reset(&mut self);
 }
 
-/// Base trait for volatility implementations.
+/// Base trait for volatility indicators.
 pub trait Volatility {
     type Input;
     type Output;

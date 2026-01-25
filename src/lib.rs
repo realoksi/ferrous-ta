@@ -9,17 +9,28 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 use num_traits::FromPrimitive;
 
 /// Base trait for stateful moving average implementations.
-pub trait MovingAverage<T> {
+pub trait MovingAverage {
+    type Input;
     type Output;
-    fn push(&mut self, value: T) -> Self::Output;
+    fn push(&mut self, value: Self::Input) -> Self::Output;
     /// Resets internal state to its initial values.
     fn reset(&mut self);
 }
 
 /// Base trait for oscillator implementations.
-pub trait Oscillator<T> {
+pub trait Oscillator {
+    type Input;
     type Output;
-    fn push(&mut self, value: T) -> Self::Output;
+    fn push(&mut self, value: Self::Input) -> Self::Output;
+    /// Resets internal state to its initial values.
+    fn reset(&mut self);
+}
+
+/// Base trait for volatility implementations.
+pub trait Volatility {
+    type Input;
+    type Output;
+    fn push(&mut self, value: Self::Input) -> Self::Output;
     /// Resets internal state to its initial values.
     fn reset(&mut self);
 }
@@ -70,11 +81,12 @@ impl<T: Number> CMA<T> {
     }
 }
 
-impl<T: Number> MovingAverage<T> for CMA<T> {
+impl<T: Number> MovingAverage for CMA<T> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         self.count = self.count + 1;
 
         let diff = value - self.avg;
@@ -107,11 +119,12 @@ impl<T: Number> DEMA<T> {
     }
 }
 
-impl<T: Number> MovingAverage<T> for DEMA<T> {
+impl<T: Number> MovingAverage for DEMA<T> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         let e1 = self.ema_1.push(value).unwrap();
         let e2 = self.ema_2.push(e1).unwrap();
 
@@ -159,11 +172,12 @@ impl<T: Number> EMA<T> {
     }
 }
 
-impl<T: Number> MovingAverage<T> for EMA<T> {
+impl<T: Number> MovingAverage for EMA<T> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         if let Some(last) = self.last {
             let next = self.alpha * value + self.beta * last;
 
@@ -204,11 +218,12 @@ impl<T: Number, const N: usize> SMA<T, N> {
     }
 }
 
-impl<T: Number, const N: usize> MovingAverage<T> for SMA<T, N> {
+impl<T: Number, const N: usize> MovingAverage for SMA<T, N> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         if self.count < N {
             self.count += 1;
         }
@@ -255,11 +270,12 @@ impl<T: Number> TEMA<T> {
     }
 }
 
-impl<T: Number> MovingAverage<T> for TEMA<T> {
+impl<T: Number> MovingAverage for TEMA<T> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Option<T> {
+    fn push(&mut self, value: Self::Input) -> Option<T> {
         let e1 = self.ema_1.push(value).unwrap();
         let e2 = self.ema_2.push(e1).unwrap();
         let e3 = self.ema_3.push(e2).unwrap();
@@ -299,11 +315,12 @@ impl<T: Number> MACD<T> {
     }
 }
 
-impl<T: Number> Oscillator<T> for MACD<T> {
+impl<T: Number> Oscillator for MACD<T> {
+    type Input = T;
     type Output = [T; 3];
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         let macd = self.fast_ema.push(value).unwrap() - self.slow_ema.push(value).unwrap();
 
         let signal = self.signal_ema.push(macd).unwrap();
@@ -346,11 +363,12 @@ impl<T: Number, const N: usize> WMA<T, N> {
     }
 }
 
-impl<T: Number, const N: usize> MovingAverage<T> for WMA<T, N> {
+impl<T: Number, const N: usize> MovingAverage for WMA<T, N> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         if self.count < N {
             self.count += 1;
         }
@@ -422,11 +440,12 @@ fn partial_max<T: PartialOrd>(a: T, b: T) -> T {
     if a > b { a } else { b }
 }
 
-impl<T: Number> Oscillator<T> for RSI<T> {
+impl<T: Number> Oscillator for RSI<T> {
+    type Input = T;
     type Output = Option<T>;
 
     #[inline]
-    fn push(&mut self, value: T) -> Self::Output {
+    fn push(&mut self, value: Self::Input) -> Self::Output {
         if self.last.is_none() {
             self.last = Some(value);
 
@@ -480,7 +499,6 @@ impl<T: Number> Oscillator<T> for RSI<T> {
 
 /// # Bollinger bands
 pub struct BBANDS;
-
 /// # Average true range
 pub struct ATR;
 /// # Stochastic oscillator

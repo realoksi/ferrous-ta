@@ -324,6 +324,7 @@ pub struct WMA<T, const N: usize> {
     pub(crate) buf: [T; N],
     pub(crate) count: usize,
     pub(crate) divisor: T,
+    pub(crate) n_as_t: T,
     pub(crate) index: usize,
     pub(crate) rolling_sum: T,
     pub(crate) rolling_weighted_sum: T,
@@ -337,6 +338,7 @@ impl<T: Number, const N: usize> WMA<T, N> {
             buf: [T::default(); N],
             count: 0,
             divisor: T::from_usize(1).unwrap() / T::from_usize(N * (N + 1) / 2).unwrap(),
+            n_as_t: T::from_usize(N).unwrap(),
             index: 0,
             rolling_sum: T::default(),
             rolling_weighted_sum: T::default(),
@@ -356,7 +358,7 @@ impl<T: Number, const N: usize> MovingAverage<T> for WMA<T, N> {
         let last_value = self.buf[self.index];
 
         self.rolling_weighted_sum =
-            self.rolling_weighted_sum - self.rolling_sum + value * T::from_usize(N).unwrap();
+            self.rolling_weighted_sum - self.rolling_sum + value * self.n_as_t;
 
         self.buf[self.index] = value;
         self.rolling_sum = self.rolling_sum - last_value + value;
@@ -480,6 +482,7 @@ impl<T: Number> Oscillator<T> for RSI<T> {
 
 /// # Bollinger bands
 pub struct BBANDS;
+
 /// # Average true range
 pub struct ATR;
 /// # Stochastic oscillator

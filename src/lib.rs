@@ -387,7 +387,6 @@ pub struct RSI<T> {
     pub(crate) avg_gain: T,
     pub(crate) avg_loss: T,
     pub(crate) count: usize,
-    pub(crate) fifty_as_t: T,
     pub(crate) last: Option<T>,
     pub(crate) one_hundred_as_t: T,
     pub(crate) periods: usize,
@@ -406,7 +405,6 @@ impl<T: Number> RSI<T> {
             avg_gain: T::default(),
             avg_loss: T::default(),
             count: 0,
-            fifty_as_t: T::from_usize(50).unwrap(),
             last: None,
             one_hundred_as_t: T::from_usize(100).unwrap(),
             periods,
@@ -429,44 +427,44 @@ impl<T: Number> Oscillator<T> for RSI<T> {
 
     #[inline]
     fn push(&mut self, value: T) -> Self::Output {
-        let result = if let Some(last) = self.last {
-            let diff = value - last;
-            let gain = partial_max(diff, self.zero_as_t);
-            let loss = partial_max(-diff, self.zero_as_t);
+        if self.last.is_none() {
+            self.last = Some(value);
 
-            if self.count < self.periods {
-                self.sum_gain = self.sum_gain + gain;
-                self.sum_loss = self.sum_loss + loss;
-                self.count += 1;
+            return None;
+        }
 
-                if self.count == self.periods {
-                    self.avg_gain = self.sum_gain / self.periods_as_t;
-                    self.avg_loss = self.sum_loss / self.periods_as_t;
-                } else {
-                    self.last = Some(value);
+        let last = self.last.unwrap(); // self.last cannot be None
+        let diff = value - last;
+        let gain = partial_max(diff, self.zero_as_t);
+        let loss = partial_max(-diff, self.zero_as_t);
 
-                    return None;
-                }
-            } else {
-                self.avg_gain =
-                    (self.avg_gain * self.periods_minus_one_as_t + gain) / self.periods_as_t;
-                self.avg_loss =
-                    (self.avg_loss * self.periods_minus_one_as_t + loss) / self.periods_as_t;
+        if self.count < self.periods {
+            self.sum_gain = self.sum_gain + gain;
+            self.sum_loss = self.sum_loss + loss;
+            self.count += 1;
+
+            if self.count == self.periods {
+                self.avg_gain = self.sum_gain / self.periods_as_t;
+                self.avg_loss = self.sum_loss / self.periods_as_t;
             }
 
-            let rsi: T = if self.avg_gain == self.zero_as_t && self.avg_loss == self.zero_as_t {
-                self.fifty_as_t
-            } else {
-                self.one_hundred_as_t * self.avg_gain / (self.avg_gain + self.avg_loss)
-            };
-            Some(rsi)
+            self.last = Some(value);
+
+            return None;
+        }
+
+        self.avg_gain = (self.avg_gain * self.periods_minus_one_as_t + gain) / self.periods_as_t;
+        self.avg_loss = (self.avg_loss * self.periods_minus_one_as_t + loss) / self.periods_as_t;
+
+        let rsi: T = if self.avg_loss == self.zero_as_t {
+            self.one_hundred_as_t
+        } else if self.avg_gain == self.zero_as_t {
+            self.zero_as_t
         } else {
-            None
+            self.one_hundred_as_t * self.avg_gain / (self.avg_gain + self.avg_loss)
         };
 
-        self.last = Some(value);
-
-        result
+        Some(rsi)
     }
 
     #[inline]

@@ -8,6 +8,16 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 use num_traits::FromPrimitive;
 
+#[inline]
+fn partial_max2<T: PartialOrd>(a: T, b: T) -> T {
+    if a > b { a } else { b }
+}
+
+#[inline]
+fn partial_min2<T: PartialOrd>(a: T, b: T) -> T {
+    if a > b { b } else { a }
+}
+
 /// Base trait for moving average indicators.
 pub trait MovingAverage {
     type Input;
@@ -435,11 +445,6 @@ impl<T: Number> RSI<T> {
     }
 }
 
-#[inline]
-fn partial_max<T: PartialOrd>(a: T, b: T) -> T {
-    if a > b { a } else { b }
-}
-
 impl<T: Number> Oscillator for RSI<T> {
     type Input = T;
     type Output = Option<T>;
@@ -454,8 +459,8 @@ impl<T: Number> Oscillator for RSI<T> {
 
         let last = self.last.unwrap(); // self.last cannot be None
         let diff = value - last;
-        let gain = partial_max(diff, self.zero_as_t);
-        let loss = partial_max(-diff, self.zero_as_t);
+        let gain = partial_max2(diff, self.zero_as_t);
+        let loss = partial_max2(-diff, self.zero_as_t);
 
         if self.count < self.periods {
             self.sum_gain = self.sum_gain + gain;
@@ -497,10 +502,81 @@ impl<T: Number> Oscillator for RSI<T> {
     }
 }
 
+/// # Average true range
+pub struct ATR<T> {
+    pub(crate) count: usize,
+    pub(crate) atr: Option<T>,
+    pub(crate) last_close: Option<T>,
+    pub(crate) periods: usize,
+    pub(crate) periods_minus_one_t: T,
+    pub(crate) periods_t: T,
+    pub(crate) tr_accumulator: T,
+}
+
+impl<T: Number> ATR<T> {
+    pub fn new(periods: usize) -> Self {
+        Self {
+            count: 0,
+            atr: None,
+            last_close: None,
+            periods,
+            periods_minus_one_t: T::from_usize(1).unwrap(),
+            periods_t: T::from_usize(periods).unwrap(),
+            tr_accumulator: T::default(),
+        }
+    }
+}
+
+fn get_tr<T: Number>(high: T, low: T, prev_close: T) -> T {
+    partial_max2(high, prev_close) - partial_min2(low, prev_close)
+}
+
+impl<T: Number> Volatility for ATR<T> {
+    type Input = [T; 3]; // high low close
+    type Output = Option<T>;
+
+    fn push(&mut self, input: Self::Input) -> Self::Output {
+        if self.last_close.is_none() {
+            self.last_close = Some(input[2]);
+            return None;
+        }
+
+        let last_close = self.last_close.unwrap();
+        self.last_close = Some(input[2]);
+
+        if self.atr.is_none() {
+            self.tr_accumulator = self.tr_accumulator + get_tr(input[0], input[1], last_close);
+            self.count += 1;
+
+            if self.count == self.periods {
+                self.atr = Some(self.tr_accumulator / self.periods_t);
+
+                return self.atr;
+            }
+
+            return None;
+        }
+
+        let last_atr = self.atr.unwrap();
+
+        self.atr = Some(
+            (last_atr * self.periods_minus_one_t + get_tr(input[0], input[1], last_close))
+                / self.periods_t,
+        );
+
+        self.atr
+    }
+
+    fn reset(&mut self) {
+        self.count = 0;
+        self.atr = None;
+        self.last_close = None;
+        self.tr_accumulator = T::default();
+    }
+}
+
 /// # Bollinger bands
 pub struct BBANDS;
-/// # Average true range
-pub struct ATR;
 /// # Stochastic oscillator
 pub struct STOCH;
 /// # Average directional index

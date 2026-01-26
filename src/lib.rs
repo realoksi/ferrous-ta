@@ -544,8 +544,10 @@ impl<T: Number> Volatility for ATR<T> {
         let last_close = self.last_close.unwrap();
         self.last_close = Some(input[2]);
 
+        let tr = get_tr(input[0], input[1], last_close);
+
         if self.atr.is_none() {
-            self.tr_accumulator = self.tr_accumulator + get_tr(input[0], input[1], last_close);
+            self.tr_accumulator = self.tr_accumulator + tr;
             self.count += 1;
 
             if self.count == self.periods {
@@ -559,10 +561,7 @@ impl<T: Number> Volatility for ATR<T> {
 
         let last_atr = self.atr.unwrap();
 
-        self.atr = Some(
-            (last_atr * self.periods_minus_one_t + get_tr(input[0], input[1], last_close))
-                / self.periods_t,
-        );
+        self.atr = Some((last_atr * self.periods_minus_one_t + tr) / self.periods_t);
 
         self.atr
     }

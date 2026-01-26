@@ -520,7 +520,7 @@ impl<T: Number> ATR<T> {
             atr: None,
             last_close: None,
             periods,
-            periods_minus_one_t: T::from_usize(1).unwrap(),
+            periods_minus_one_t: T::from_usize(periods - 1).unwrap(),
             periods_t: T::from_usize(periods).unwrap(),
             tr_accumulator: T::default(),
         }

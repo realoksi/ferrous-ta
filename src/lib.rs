@@ -535,6 +535,8 @@ impl<T: Number> Volatility for ATR<T> {
     type Input = [T; 3]; // high low close
     type Output = Option<T>;
 
+    // original atr definition and this implementation both use wilder’s smoothing
+    // wilder’s method has moderate lag. smoothing method should be configurable
     fn push(&mut self, input: Self::Input) -> Self::Output {
         if self.last_close.is_none() {
             self.last_close = Some(input[2]);

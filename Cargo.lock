@@ -40,7 +40,6 @@ name = "ferrous-ta"
 version = "0.1.0"
 dependencies = [
  "csv",
- "num-traits",
  "rust_decimal",
 ]
 

@@ -3,9 +3,6 @@ name = "ferrous-ta"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-num-traits = { version = "0.2.19", default-features = false }
-
 [dev-dependencies]
-rust_decimal = { version = "1.40.0", default-features = false, features = ["macros"] }
-csv = { version = "1.4.0", default-features = false}
+rust_decimal = { version = "1.40.0", default-features = false, features = ["macros", "maths"] }
+csv = { version = "1.4.0", default-features = false }

@@ -5,4 +5,4 @@ edition = "2024"
 
 [dev-dependencies]
 rust_decimal = { version = "1.40.0", default-features = false, features = ["macros", "maths"] }
-csv = { version = "1.4.0", default-features = false }
+csv = { version = "1.4.0" }

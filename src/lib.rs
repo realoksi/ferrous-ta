@@ -373,3 +373,68 @@ where
         self.rolling_weighted_sum = self.zero_t;
     }
 }
+
+pub struct VWAP<T, const N: usize> {
+    buf: [[T; 2]; N],
+    rolling_num_sum: T,
+    rolling_den_sum: T,
+    count: usize,
+    index: usize,
+}
+
+#[allow(clippy::new_without_default)]
+impl<T, const N: usize> VWAP<T, N>
+where
+    T: Scalar,
+{
+    pub fn new() -> Self {
+        let zero_t = T::from(0);
+
+        Self {
+            buf: [[zero_t; 2]; N],
+            rolling_num_sum: zero_t,
+            rolling_den_sum: zero_t,
+            count: 0,
+            index: 0,
+        }
+    }
+}
+
+impl<T, const N: usize> Filter for VWAP<T, N>
+where
+    T: Scalar,
+{
+    type Input = [T; 2]; // p, q
+    type Output = Option<T>;
+
+    #[inline]
+    fn step(&mut self, value: Self::Input) -> Self::Output {
+        if self.count < N {
+            self.count += 1;
+        }
+
+        let q = value[1];
+        let pv = value[0] * q;
+
+        let prev_pv = self.buf[self.index][0];
+        let prev_q = self.buf[self.index][1];
+
+        self.buf[self.index] = [pv, q];
+
+        self.rolling_num_sum = self.rolling_num_sum - prev_pv + pv;
+        self.rolling_den_sum = self.rolling_den_sum - prev_q + q;
+
+        self.index = (self.index + 1) % N;
+
+        if self.count < N {
+            None
+        } else {
+            Some(self.rolling_num_sum / self.rolling_den_sum)
+        }
+    }
+
+    #[inline]
+    fn reset(&mut self) {
+        todo!();
+    }
+}

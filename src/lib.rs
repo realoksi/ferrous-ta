@@ -2,6 +2,7 @@
 
 pub mod traits;
 
+#[doc(inline)]
 pub use crate::traits::*;
 
 /// # Welles Wilder smoothing
@@ -55,10 +56,10 @@ impl<T> EMA<T>
 where
     T: Scalar,
 {
-    pub fn new(prev: Option<T>, periods: T, smoothing_constant: T) -> Self {
+    pub fn new(prev: Option<T>, periods: T, smoothing_constant: i32) -> Self {
         let one_t = T::from(1);
 
-        let alpha = smoothing_constant / (periods + one_t);
+        let alpha = T::from(smoothing_constant) / (periods + one_t);
 
         Self {
             prev,
@@ -153,7 +154,7 @@ impl<T> DEMA<T>
 where
     T: Scalar,
 {
-    pub fn new(prev: Option<T>, periods: T, smoothing_constant: T) -> Self {
+    pub fn new(prev: Option<T>, periods: T, smoothing_constant: i32) -> Self {
         Self {
             ema_1: EMA::new(prev, periods, smoothing_constant),
             ema_2: EMA::new(None, periods, smoothing_constant),
@@ -196,7 +197,7 @@ impl<T> TEMA<T>
 where
     T: Scalar,
 {
-    pub fn new(prev: Option<T>, periods: T, smoothing_constant: T) -> Self {
+    pub fn new(prev: Option<T>, periods: T, smoothing_constant: i32) -> Self {
         Self {
             ema_1: EMA::new(prev, periods, smoothing_constant),
             ema_2: EMA::new(None, periods, smoothing_constant),

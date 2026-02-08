@@ -12,6 +12,8 @@ impl<T> Scalar for T where
 pub trait Filter {
     type Input;
     type Output;
+    /// Steps the filter forward by a single value.
     fn step(&mut self, value: Self::Input) -> Self::Output;
+    /// Resets the internal state to their original values.
     fn reset(&mut self);
 }

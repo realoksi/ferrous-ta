@@ -2,8 +2,9 @@
 
 pub mod traits;
 
-use crate::traits::*;
+pub use crate::traits::*;
 
+/// # Welles Wilder smoothing
 pub struct WWS<T> {
     prev: Option<T>,
     periods: T,
@@ -43,6 +44,7 @@ where
     }
 }
 
+/// Exponential moving average
 pub struct EMA<T> {
     prev: Option<T>,
     alpha: T,
@@ -91,6 +93,7 @@ where
     }
 }
 
+/// # Cumulative moving average
 pub struct CMA<T> {
     count: T,
     avg: T,
@@ -139,6 +142,7 @@ where
     }
 }
 
+/// # Double exponential moving average
 pub struct DEMA<T> {
     ema_1: EMA<T>,
     ema_2: EMA<T>,
@@ -180,6 +184,7 @@ where
     }
 }
 
+/// # Triple exponential moving average
 pub struct TEMA<T> {
     ema_1: EMA<T>,
     ema_2: EMA<T>,
@@ -224,6 +229,7 @@ where
     }
 }
 
+/// # Simple moving average
 pub struct SMA<T, const N: usize> {
     buf: [T; N],
     count: usize,
@@ -299,6 +305,7 @@ where
     }
 }
 
+/// # Weighted moving average
 pub struct WMA<T, const N: usize> {
     buf: [T; N],
     count: usize,
@@ -374,6 +381,7 @@ where
     }
 }
 
+/// # Volume weighted average price
 pub struct VWAP<T, const N: usize> {
     buf: [[T; 2]; N],
     rolling_num_sum: T,

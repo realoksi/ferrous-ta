@@ -388,6 +388,7 @@ pub struct VWAP<T, const N: usize> {
     rolling_den_sum: T,
     count: usize,
     index: usize,
+    zero_t: T,
 }
 
 #[allow(clippy::new_without_default)]
@@ -404,6 +405,7 @@ where
             rolling_den_sum: zero_t,
             count: 0,
             index: 0,
+            zero_t,
         }
     }
 }
@@ -443,6 +445,10 @@ where
 
     #[inline]
     fn reset(&mut self) {
-        todo!();
+        self.buf = [[self.zero_t; 2]; N];
+        self.rolling_num_sum = self.zero_t;
+        self.rolling_den_sum = self.zero_t;
+        self.count = 0;
+        self.index = 0;
     }
 }

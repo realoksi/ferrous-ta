@@ -481,6 +481,7 @@ where
     type Input = T;
     type Output = Option<T>;
 
+    #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
         let w1 = self.wma_1.step(value);
         let w2 = self.wma_2.step(value);
@@ -494,6 +495,7 @@ where
         }
     }
 
+    #[inline]
     fn reset(&mut self) {
         self.wma_1.reset();
         self.wma_2.reset();

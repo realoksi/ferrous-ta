@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(clippy::new_without_default)]
 
 pub mod traits;
 
@@ -102,7 +103,6 @@ pub struct CMA<T> {
     one_t: T,
 }
 
-#[allow(clippy::new_without_default)]
 impl<T> CMA<T>
 where
     T: Scalar,
@@ -240,7 +240,6 @@ pub struct SMA<T, const N: usize> {
     zero_t: T,
 }
 
-#[allow(clippy::new_without_default)]
 impl<T, const N: usize> SMA<T, N>
 where
     T: Scalar,
@@ -318,7 +317,6 @@ pub struct WMA<T, const N: usize> {
     zero_t: T,
 }
 
-#[allow(clippy::new_without_default)]
 impl<T, const N: usize> WMA<T, N>
 where
     T: Scalar,
@@ -392,7 +390,6 @@ pub struct VWAP<T, const N: usize> {
     zero_t: T,
 }
 
-#[allow(clippy::new_without_default)]
 impl<T, const N: usize> VWAP<T, N>
 where
     T: Scalar,
@@ -415,7 +412,8 @@ impl<T, const N: usize> Filter for VWAP<T, N>
 where
     T: Scalar,
 {
-    type Input = [T; 2]; // p, q
+    /// \[price, quantity\]
+    type Input = [T; 2];
     type Output = Option<T>;
 
     #[inline]
@@ -453,3 +451,58 @@ where
         self.index = 0;
     }
 }
+
+pub struct HMA<T, const N: usize, const N_HALF: usize, const N_SQRT: usize> {
+    wma_1: WMA<T, N>,
+    wma_2: WMA<T, N_HALF>,
+    wma_3: WMA<T, N_SQRT>,
+    two_t: T,
+}
+
+impl<T, const N: usize, const N_HALF: usize, const N_SQRT: usize> HMA<T, N, N_HALF, N_SQRT>
+where
+    T: Scalar,
+{
+    pub fn new() -> Self {
+        Self {
+            wma_1: WMA::new(),
+            wma_2: WMA::new(),
+            wma_3: WMA::new(),
+            two_t: T::from(2),
+        }
+    }
+}
+
+impl<T, const N: usize, const N_HALF: usize, const N_SQRT: usize> Filter
+    for HMA<T, N, N_HALF, N_SQRT>
+where
+    T: Scalar,
+{
+    type Input = T;
+    type Output = Option<T>;
+
+    fn step(&mut self, value: Self::Input) -> Self::Output {
+        let w1 = self.wma_1.step(value);
+        let w2 = self.wma_2.step(value);
+
+        if let (Some(w1), Some(w2)) = (w1, w2) {
+            let raw_hma = (self.two_t * w1) - w2;
+
+            self.wma_3.step(raw_hma)
+        } else {
+            None
+        }
+    }
+
+    fn reset(&mut self) {
+        self.wma_1.reset();
+        self.wma_2.reset();
+        self.wma_3.reset();
+    }
+}
+
+/// # Kaufman adaptive moving average
+pub struct KAMA {}
+
+/// # Zero lag exponential moving average
+pub struct ZLEMA {}

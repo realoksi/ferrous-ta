@@ -6,6 +6,40 @@ pub mod traits;
 #[doc(inline)]
 pub use crate::traits::*;
 
+pub struct SlidingWindow<T, const N: usize> {
+    buffer: [T; N],
+    index: usize,
+    length: usize,
+}
+
+impl<T, const N: usize> SlidingWindow<T, N>
+where
+    T: Copy,
+{
+    pub fn new(fill: T) -> Self {
+        Self {
+            buffer: [fill; N],
+            index: 0,
+            length: 0,
+        }
+    }
+
+    #[inline]
+    pub fn push(&mut self, value: T) -> Option<T> {
+        let prev = self.buffer[self.index];
+
+        self.buffer[self.index] = value;
+        self.index = (self.index + 1) % N;
+
+        if self.length < N {
+            self.length += 1;
+            None
+        } else {
+            Some(prev)
+        }
+    }
+}
+
 /// # Welles Wilder smoothing
 pub struct WWS<T> {
     prev: Option<T>,

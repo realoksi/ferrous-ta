@@ -20,7 +20,7 @@ where
         Self {
             buffer: [fill; N],
             index: 0,
-            length: 0,
+            length: 1,
         }
     }
 
@@ -37,6 +37,13 @@ where
         } else {
             Some(prev)
         }
+    }
+
+    #[inline]
+    pub fn reset(&mut self, fill: T) {
+        self.buffer = [fill; N];
+        self.index = 0;
+        self.length = 1;
     }
 }
 
@@ -266,12 +273,10 @@ where
 
 /// # Simple moving average
 pub struct SMA<T, const N: usize> {
-    buf: [T; N],
-    count: usize,
-    divisor_neg: T,
-    index: usize,
+    sliding_window: SlidingWindow<T, N>,
     rolling_sum: T,
-    zero_t: T,
+    divisor: T,
+    zero: T,
 }
 
 impl<T, const N: usize> SMA<T, N>
@@ -279,63 +284,40 @@ where
     T: Scalar,
 {
     pub fn new() -> Self {
-        // `N` must be able to represent `T`, meaning `usize -> T`.
-        // 1. Using a `T: From<usize>` constraint solves the issue, but excludes vital numeric types
-        // such as the `f64` primitive.
-        // 2. `fn new(periods: T)` is inconvenient (the caller shouldn't have to pass the buffer
-        // size twice).
-        // 3. Casting `N` via `as i32` is fragile (and perhaps misleading), but it's the most
-        // practical solution so far. An assertion against `i32::MAX` essentially makes the
-        // conversion infallible.
-
         assert!(N <= i32::MAX as usize);
 
-        let zero_t = T::from(0);
+        let zero = T::from(0);
 
         Self {
-            buf: [zero_t; N],
-            index: 0,
-            divisor_neg: T::from(1) / T::from(N as i32),
-            rolling_sum: zero_t,
-            count: 0,
-            zero_t,
+            sliding_window: SlidingWindow::new(zero),
+            rolling_sum: zero,
+            divisor: T::from(1) / T::from(N as i32),
+            zero
         }
     }
 }
 
-impl<T, const N: usize> Filter for SMA<T, N>
-where
-    T: Scalar,
-{
+impl<T, const N: usize> Filter for SMA<T, N> where T: Scalar {
     type Input = T;
     type Output = Option<T>;
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        if self.count < N {
-            self.count += 1;
-        }
+        self.rolling_sum = self.rolling_sum + value;
 
-        let last_value = self.buf[self.index];
+        if let Some(prev) = self.sliding_window.push(value) {
+            self.rolling_sum = self.rolling_sum - prev;
 
-        self.buf[self.index] = value;
-        self.rolling_sum = self.rolling_sum - last_value + value;
-
-        self.index = (self.index + 1) % N;
-
-        if self.count < N {
-            None
+            Some(self.rolling_sum * self.divisor)
         } else {
-            Some(self.rolling_sum * self.divisor_neg)
+            None
         }
     }
 
     #[inline]
     fn reset(&mut self) {
-        self.buf = [self.zero_t; N];
-        self.index = 0;
-        self.rolling_sum = self.zero_t;
-        self.count = 0;
+        self.sliding_window.reset(self.zero);
+        self.rolling_sum = self.zero;
     }
 }
 

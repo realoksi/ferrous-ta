@@ -6,33 +6,37 @@ pub mod traits;
 #[doc(inline)]
 pub use crate::traits::*;
 
-pub struct SlidingWindow<T, const N: usize> {
-    buffer: [T; N],
-    index: usize,
-    length: usize,
+use core::ops::{Add, Sub};
+
+struct SlidingWindow<T, const N: usize> {
+    buf: [T; N],
+    idx: usize,
+    len: usize,
 }
 
 impl<T, const N: usize> SlidingWindow<T, N>
 where
     T: Copy,
 {
-    pub fn new(fill: T) -> Self {
+    pub fn new(nil: T) -> Self {
+        assert!(N > 0);
+
         Self {
-            buffer: [fill; N],
-            index: 0,
-            length: 1,
+            buf: [nil; N],
+            idx: 0,
+            len: 0,
         }
     }
 
     #[inline]
     pub fn push(&mut self, value: T) -> Option<T> {
-        let prev = self.buffer[self.index];
+        let prev = self.buf[self.idx];
 
-        self.buffer[self.index] = value;
-        self.index = (self.index + 1) % N;
+        self.buf[self.idx] = value;
+        self.idx = (self.idx + 1) % N;
 
-        if self.length < N {
-            self.length += 1;
+        if self.len < N - 1 {
+            self.len += 1;
             None
         } else {
             Some(prev)
@@ -40,10 +44,78 @@ where
     }
 
     #[inline]
-    pub fn reset(&mut self, fill: T) {
-        self.buffer = [fill; N];
-        self.index = 0;
-        self.length = 1;
+    pub fn capacity(&self) -> usize {
+        N
+    }
+
+    #[inline]
+    pub fn front(&self) -> &T {
+        &self.buf[(self.idx + 1) % N]
+    }
+
+    #[inline]
+    pub fn back(&self) -> &T {
+        &self.buf[self.idx]
+    }
+
+    #[inline]
+    pub fn as_slices(&self) -> (&[T], &[T]) {
+        if self.len < N - 1 {
+            (&self.buf[..self.len], &[])
+        } else {
+            let (left, right) = self.buf.split_at(self.idx);
+            (right, left)
+        }
+    }
+
+    #[inline]
+    pub fn reset(&mut self) {
+        self.idx = 0;
+        self.len = 0;
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        let (a, b) = self.as_slices();
+        a.iter().chain(b.iter())
+    }
+}
+
+struct Accumulator<T, const N: usize> {
+    sliding_window: SlidingWindow<T, N>,
+    sum: T,
+    nil: T,
+}
+
+impl<T, const N: usize> Accumulator<T, N>
+where
+    T: Copy + Add<Output = T> + Sub<Output = T>,
+{
+    pub fn new(nil: T) -> Self {
+        Self {
+            sliding_window: SlidingWindow::new(nil),
+            sum: nil,
+            nil,
+        }
+    }
+
+    #[inline]
+    pub fn push(&mut self, value: T) -> Option<T> {
+        if let Some(prev) = self.sliding_window.push(value) {
+            self.sum = self.sum - prev + value;
+
+            Some(self.sum)
+        } else {
+            self.sum = self.sum + value;
+
+            None
+        }
+    }
+
+    #[inline]
+    pub fn reset(&mut self) {
+        self.sliding_window.reset();
+        self.sum = self.nil;
     }
 }
 
@@ -271,12 +343,10 @@ where
     }
 }
 
-/// # Simple moving average
+/// Simple moving average
 pub struct SMA<T, const N: usize> {
-    sliding_window: SlidingWindow<T, N>,
-    rolling_sum: T,
+    accumulator: Accumulator<T, N>,
     divisor: T,
-    zero: T,
 }
 
 impl<T, const N: usize> SMA<T, N>
@@ -286,29 +356,24 @@ where
     pub fn new() -> Self {
         assert!(N <= i32::MAX as usize);
 
-        let zero = T::from(0);
-
         Self {
-            sliding_window: SlidingWindow::new(zero),
-            rolling_sum: zero,
+            accumulator: Accumulator::new(T::from(0)),
             divisor: T::from(1) / T::from(N as i32),
-            zero
         }
     }
 }
 
-impl<T, const N: usize> Filter for SMA<T, N> where T: Scalar {
+impl<T, const N: usize> Filter for SMA<T, N>
+where
+    T: Scalar,
+{
     type Input = T;
     type Output = Option<T>;
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        self.rolling_sum = self.rolling_sum + value;
-
-        if let Some(prev) = self.sliding_window.push(value) {
-            self.rolling_sum = self.rolling_sum - prev;
-
-            Some(self.rolling_sum * self.divisor)
+        if let Some(sum) = self.accumulator.push(value) {
+            Some(sum * self.divisor)
         } else {
             None
         }
@@ -316,18 +381,15 @@ impl<T, const N: usize> Filter for SMA<T, N> where T: Scalar {
 
     #[inline]
     fn reset(&mut self) {
-        self.sliding_window.reset(self.zero);
-        self.rolling_sum = self.zero;
+        self.accumulator.reset();
     }
 }
 
 /// # Weighted moving average
 pub struct WMA<T, const N: usize> {
-    buf: [T; N],
-    count: usize,
+    sliding_window: SlidingWindow<T, N>,
     divisor_neg: T,
     n_t: T,
-    index: usize,
     rolling_sum: T,
     rolling_weighted_sum: T,
     zero_t: T,
@@ -338,22 +400,7 @@ where
     T: Scalar,
 {
     pub fn new() -> Self {
-        assert!(N <= i32::MAX as usize);
-
-        let zero_t = T::from(0);
-        let one_t = T::from(1);
-        let n_t = T::from(N as i32);
-
-        Self {
-            buf: [zero_t; N],
-            count: 0,
-            divisor_neg: one_t / (n_t * (n_t + one_t) / T::from(2)),
-            n_t,
-            index: 0,
-            rolling_sum: zero_t,
-            rolling_weighted_sum: zero_t,
-            zero_t,
-        }
+        todo!();
     }
 }
 
@@ -366,33 +413,12 @@ where
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        if self.count < N {
-            self.count += 1;
-        }
-
-        let last_value = self.buf[self.index];
-
-        self.rolling_weighted_sum = self.rolling_weighted_sum - self.rolling_sum + value * self.n_t;
-
-        self.buf[self.index] = value;
-        self.rolling_sum = self.rolling_sum - last_value + value;
-
-        self.index = (self.index + 1) % N;
-
-        if self.count < N {
-            None
-        } else {
-            Some(self.rolling_weighted_sum * self.divisor_neg)
-        }
+        todo!();
     }
 
     #[inline]
     fn reset(&mut self) {
-        self.buf = [self.zero_t; N];
-        self.count = 0;
-        self.index = 0;
-        self.rolling_sum = self.zero_t;
-        self.rolling_weighted_sum = self.zero_t;
+        todo!();
     }
 }
 

@@ -41,6 +41,7 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "rust_decimal",
+ "serde",
 ]
 
 [[package]]
@@ -91,6 +92,7 @@ dependencies = [
  "arrayvec",
  "num-traits",
  "rust_decimal_macros",
+ "serde",
 ]
 
 [[package]]
@@ -108,6 +110,16 @@ name = "ryu"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a50f4cf475b65d88e057964e0e9bb1f0aa9bbb2036dc65c64596b42932536984"
+
+[[package]]
+name = "serde"
+version = "1.0.228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+dependencies = [
+ "serde_core",
+ "serde_derive",
+]
 
 [[package]]
 name = "serde_core"

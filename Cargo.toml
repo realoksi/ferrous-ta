@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dev-dependencies]
-rust_decimal = { version = "1.40.0", default-features = false, features = ["macros", "maths"] }
+serde = { version = "1.0.228", features = ["derive"]}
+rust_decimal = { version = "1.40.0", default-features = false, features = ["macros", "maths", "serde-with-str"] }
 csv = { version = "1.4.0" }

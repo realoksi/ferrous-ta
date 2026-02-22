@@ -424,12 +424,8 @@ where
 
 /// # Volume weighted average price
 pub struct VWAP<T, const N: usize> {
-    buf: [[T; 2]; N],
-    rolling_num_sum: T,
-    rolling_den_sum: T,
-    count: usize,
-    index: usize,
-    zero_t: T,
+    num_buf: Accumulator<T, N>,
+    den_buf: Accumulator<T, N>,
 }
 
 impl<T, const N: usize> VWAP<T, N>
@@ -437,15 +433,11 @@ where
     T: Scalar,
 {
     pub fn new() -> Self {
-        let zero_t = T::from(0);
+        let zero = T::from(0);
 
         Self {
-            buf: [[zero_t; 2]; N],
-            rolling_num_sum: zero_t,
-            rolling_den_sum: zero_t,
-            count: 0,
-            index: 0,
-            zero_t,
+            num_buf: Accumulator::new(zero),
+            den_buf: Accumulator::new(zero),
         }
     }
 }
@@ -454,43 +446,29 @@ impl<T, const N: usize> Filter for VWAP<T, N>
 where
     T: Scalar,
 {
-    /// \[price, quantity\]
     type Input = [T; 2];
     type Output = Option<T>;
 
+    /// - `value` is a slice containing the current price and the quantity (in that order)
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        if self.count < N {
-            self.count += 1;
-        }
+        let quantity = value[1];
+        let price_quantity = value[0] * quantity;
 
-        let q = value[1];
-        let pv = value[0] * q;
-
-        let prev_pv = self.buf[self.index][0];
-        let prev_q = self.buf[self.index][1];
-
-        self.buf[self.index] = [pv, q];
-
-        self.rolling_num_sum = self.rolling_num_sum - prev_pv + pv;
-        self.rolling_den_sum = self.rolling_den_sum - prev_q + q;
-
-        self.index = (self.index + 1) % N;
-
-        if self.count < N {
-            None
+        if let (Some(num_sum), Some(den_sum)) = (
+            self.num_buf.push(price_quantity),
+            self.den_buf.push(quantity),
+        ) {
+            Some(num_sum / den_sum)
         } else {
-            Some(self.rolling_num_sum / self.rolling_den_sum)
+            None
         }
     }
 
     #[inline]
     fn reset(&mut self) {
-        self.buf = [[self.zero_t; 2]; N];
-        self.rolling_num_sum = self.zero_t;
-        self.rolling_den_sum = self.zero_t;
-        self.count = 0;
-        self.index = 0;
+        self.num_buf.reset();
+        self.den_buf.reset();
     }
 }
 

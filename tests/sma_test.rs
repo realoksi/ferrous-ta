@@ -20,6 +20,8 @@ struct Record {
     volume: Decimal,
     #[serde(with = "rust_decimal::serde::str_option")]
     sma: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    vwap: Option<Decimal>,
 }
 
 #[test]

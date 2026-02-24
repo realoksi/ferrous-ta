@@ -234,7 +234,7 @@ where
 
 /// Simple moving average
 pub struct SMA<T, const N: usize> {
-    accumulator: Accumulator<T, N>,
+    acc: Accumulator<T, N>,
     divisor: T,
 }
 
@@ -246,7 +246,7 @@ where
         assert!(N <= i32::MAX as usize);
 
         Self {
-            accumulator: Accumulator::new(T::from(0)),
+            acc: Accumulator::new(T::from(0)),
             divisor: T::from(1) / T::from(N as i32),
         }
     }
@@ -261,7 +261,7 @@ where
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        if let Some(sum) = self.accumulator.push(value) {
+        if let Some(sum) = self.acc.push(value) {
             Some(sum * self.divisor)
         } else {
             None
@@ -270,7 +270,7 @@ where
 
     #[inline]
     fn reset(&mut self) {
-        self.accumulator.reset();
+        self.acc.reset();
     }
 }
 
@@ -346,8 +346,8 @@ where
 
 /// # Volume weighted average price
 pub struct VWAP<T, const N: usize> {
-    num_buf: Accumulator<T, N>,
-    den_buf: Accumulator<T, N>,
+    num_acc: Accumulator<T, N>,
+    den_acc: Accumulator<T, N>,
 }
 
 impl<T, const N: usize> VWAP<T, N>
@@ -358,8 +358,8 @@ where
         let zero = T::from(0);
 
         Self {
-            num_buf: Accumulator::new(zero),
-            den_buf: Accumulator::new(zero),
+            num_acc: Accumulator::new(zero),
+            den_acc: Accumulator::new(zero),
         }
     }
 }
@@ -378,8 +378,8 @@ where
         let price_quantity = value[0] * quantity;
 
         if let (Some(num_sum), Some(den_sum)) = (
-            self.num_buf.push(price_quantity),
-            self.den_buf.push(quantity),
+            self.num_acc.push(price_quantity),
+            self.den_acc.push(quantity),
         ) {
             Some(num_sum / den_sum)
         } else {
@@ -389,8 +389,8 @@ where
 
     #[inline]
     fn reset(&mut self) {
-        self.num_buf.reset();
-        self.den_buf.reset();
+        self.num_acc.reset();
+        self.den_acc.reset();
     }
 }
 

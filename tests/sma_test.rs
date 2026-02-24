@@ -22,6 +22,10 @@ struct Record {
     sma: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::str_option")]
     vwap: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    kama: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    wma: Option<Decimal>,
 }
 
 #[test]

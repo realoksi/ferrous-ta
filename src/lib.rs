@@ -48,7 +48,7 @@ where
     }
 }
 
-/// Exponential moving average
+/// # Exponential moving average
 pub struct EMA<T> {
     prev: Option<T>,
     alpha: T,
@@ -232,7 +232,7 @@ where
     }
 }
 
-/// Simple moving average
+/// # Simple moving average
 pub struct SMA<T, const N: usize> {
     acc: Accumulator<T, N>,
     divisor: T,

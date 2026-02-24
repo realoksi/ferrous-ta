@@ -1,13 +1,12 @@
 #![no_std]
 #![allow(clippy::new_without_default)]
 
+mod helpers;
 pub mod traits;
-pub mod helpers;
 
+use crate::helpers::*;
 #[doc(inline)]
 pub use crate::traits::*;
-#[doc(inline)]
-pub use crate::helpers::*;
 
 /// # Welles Wilder smoothing
 pub struct WWS<T> {
@@ -278,11 +277,11 @@ where
 /// # Weighted moving average
 pub struct WMA<T, const N: usize> {
     sliding_window: SlidingWindow<T, N>,
-    divisor_neg: T,
-    n_t: T,
+    divisor: T,
     rolling_sum: T,
     rolling_weighted_sum: T,
-    zero_t: T,
+    zero: T,
+    n: T,
 }
 
 impl<T, const N: usize> WMA<T, N>
@@ -290,7 +289,18 @@ where
     T: Scalar,
 {
     pub fn new() -> Self {
-        todo!();
+        assert!(N <= i32::MAX as usize);
+        let zero = T::from(0);
+        let n = T::from(N as i32);
+
+        Self {
+            sliding_window: SlidingWindow::new(zero),
+            divisor: T::from(2) / (n * (n + T::from(1))),
+            rolling_sum: zero,
+            rolling_weighted_sum: zero,
+            zero,
+            n,
+        }
     }
 }
 
@@ -303,12 +313,34 @@ where
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
-        todo!();
+        if let Some(prev) = self.sliding_window.push(value) {
+            self.rolling_weighted_sum =
+                self.rolling_weighted_sum - self.rolling_sum + value * self.n;
+            self.rolling_sum = self.rolling_sum - prev + value;
+
+            Some(self.rolling_weighted_sum * self.divisor)
+        } else {
+            self.rolling_sum = self.rolling_sum + value;
+            self.rolling_weighted_sum = self.zero;
+
+            for i in 0..self.sliding_window.length() {
+                self.rolling_weighted_sum = self.rolling_weighted_sum
+                    + *self.sliding_window.at(i) * T::from((i + 1) as i32);
+            }
+
+            if self.sliding_window.length() < N {
+                None
+            } else {
+                Some(self.rolling_weighted_sum * self.divisor)
+            }
+        }
     }
 
     #[inline]
     fn reset(&mut self) {
-        todo!();
+        self.sliding_window.reset();
+        self.rolling_sum = self.zero;
+        self.rolling_weighted_sum = self.zero;
     }
 }
 

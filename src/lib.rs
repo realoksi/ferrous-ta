@@ -8,7 +8,8 @@ pub use crate::helpers::*;
 #[doc(inline)]
 pub use crate::traits::*;
 
-/// # Welles Wilder smoothing
+/// Welles Wilder Smoothing is computed using the recursive form as EMA, but with a smaller
+/// smoothing factor resulting in greater lag and a smoother output.
 pub struct WWS<T> {
     prev: Option<T>,
     periods: T,
@@ -48,7 +49,8 @@ where
     }
 }
 
-/// # Exponential moving average
+/// Exponential Moving Average calculates a weighted mean where the weights of older values
+/// decrease exponentially.
 pub struct EMA<T> {
     prev: Option<T>,
     alpha: T,
@@ -97,7 +99,8 @@ where
     }
 }
 
-/// # Cumulative moving average
+/// Cumulative Moving Average calculates the arithmetic mean of all values up to the current
+/// point.
 pub struct CMA<T> {
     count: T,
     avg: T,
@@ -145,7 +148,8 @@ where
     }
 }
 
-/// # Double exponential moving average
+/// Double Exponential Moving Average computes a lag-reduced EMA by combining two exponential
+/// moving averages.
 pub struct DEMA<T> {
     ema_1: EMA<T>,
     ema_2: EMA<T>,
@@ -187,7 +191,8 @@ where
     }
 }
 
-/// # Triple exponential moving average
+/// Triple Exponential Moving Average further reduces lag by combining three exponential
+/// moving averages.
 pub struct TEMA<T> {
     ema_1: EMA<T>,
     ema_2: EMA<T>,
@@ -232,7 +237,12 @@ where
     }
 }
 
-/// # Simple moving average
+/// Simple Moving Average calculates the arithmetic mean of values over a fixed-length window
+/// within a series.
+///
+/// # ConstParams
+///
+/// - `N`: Number of periods
 pub struct SMA<T, const N: usize> {
     acc: Accumulator<T, N>,
     divisor: T,
@@ -274,7 +284,12 @@ where
     }
 }
 
-/// # Weighted moving average
+/// Weighted Moving Average calculates the weighted mean of values over a fixed-length window,
+/// biasing the result toward more recent values.
+///
+/// # ConstParams
+///
+/// - `N`: Number of periods
 pub struct WMA<T, const N: usize> {
     sliding_window: SlidingWindow<T, N>,
     divisor: T,
@@ -344,7 +359,12 @@ where
     }
 }
 
-/// # Volume weighted average price
+/// Volume Weighted Average Price calculates the weighted mean of values using volume as the
+/// weighting factor.
+///
+/// # ConstParams
+///
+/// - `N`: Number of periods
 pub struct VWAP<T, const N: usize> {
     num_acc: Accumulator<T, N>,
     den_acc: Accumulator<T, N>,
@@ -394,6 +414,14 @@ where
     }
 }
 
+/// Hull Moving Average is a low-lag moving average constructed from weighted moving averages
+/// that improves trend responsiveness while preserving smoothness.
+///
+/// # ConstParams
+///
+/// - `N`: Number of periods
+/// - `N_HALF`: Half of the number of periods
+/// - `N_SQRT`: Square root of the number of periods
 pub struct HMA<T, const N: usize, const N_HALF: usize, const N_SQRT: usize> {
     wma_1: WMA<T, N>,
     wma_2: WMA<T, N_HALF>,

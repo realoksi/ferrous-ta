@@ -1,3 +1,5 @@
+//! A technical analysis library. `no_std` compatible. **Unstable. Use at your own discretion.**
+
 #![no_std]
 #![allow(clippy::new_without_default)]
 
@@ -8,8 +10,8 @@ pub use crate::helpers::*;
 #[doc(inline)]
 pub use crate::traits::*;
 
-/// Welles Wilder Smoothing is computed using the recursive form as EMA, but with a smaller
-/// smoothing factor resulting in greater lag and a smoother output.
+/// Welles Wilder Smoothing is computed using the same recursive form as EMA, but with a smaller
+/// smoothing factor resulting in a smoother output but with more lag.
 pub struct WWS<T> {
     prev: Option<T>,
     periods: T,

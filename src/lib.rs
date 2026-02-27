@@ -475,8 +475,8 @@ where
     }
 }
 
-/// # Kaufman adaptive moving average
+/// Kaufman's Adaptive Moving Average
 pub struct KAMA {}
 
-/// # Zero lag exponential moving average
+/// Zero Lag Exponential Moving Average
 pub struct ZLEMA {}

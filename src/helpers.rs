@@ -15,6 +15,12 @@ pub(crate) fn get_tr<T: Copy + PartialOrd + Sub<Output = T>>(high: T, low: T, pr
     partial_max2(high, prev_close) - partial_min2(low, prev_close)
 }
 
+/// ...
+///
+/// # ConstParams
+///
+/// - `N`: Maximum amount of elements the window can hold
+///
 pub struct SlidingWindow<T, const N: usize> {
     buf: [T; N],
     idx: usize,
@@ -25,6 +31,14 @@ impl<T, const N: usize> SlidingWindow<T, N>
 where
     T: Copy,
 {
+    /// Creates a new instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `nil`: A fill value to use when initializing the buffer.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -40,6 +54,21 @@ where
         }
     }
 
+    /// Creates a new instance from a slice reference.
+    ///
+    /// Length of `slice` must be at least `N`, or else this method will return `None`.
+    ///
+    /// # Parameters
+    ///
+    /// - `slice`: A slice reference to initialize from.
+    ///
+    /// # Returns
+    ///
+    /// - `Self`: when a new instance was successfully initialized
+    /// - `None`: when there aren't enough slice values to initialize from
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -53,20 +82,28 @@ where
 
         Some(Self {
             buf: *buf,
-            idx: 0, // `idx` should always be aligned when initialized this way
+            idx: 0, // `idx` should always be aligned (0) when initialized from a slice
             len: N,
         })
     }
 
+    /// Adds a value to the window, or ejects and replaces a value when the window is full.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(T)`: when a value is ejected
+    /// - `None`: when the window isn't at capacity
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
     /// let mut sliding_window = SlidingWindow::<_, 2>::new(0.0);
     ///
-    /// assert_eq!(None, sliding_window.push(16.5));
-    /// assert_eq!(None, sliding_window.push(20.0));
-    /// // Now the window is full. So the next push will result in an eviction of the oldest value.
-    /// assert_eq!(Some(16.5), sliding_window.push(21.0));
+    /// assert_eq!(None, sliding_window.push(16.5)); // no ejection
+    /// assert_eq!(None, sliding_window.push(20.0)); // no ejection
+    /// assert_eq!(Some(16.5), sliding_window.push(21.0)); // ejection
     /// ```
     #[inline]
     pub fn push(&mut self, value: T) -> Option<T> {
@@ -83,6 +120,18 @@ where
         }
     }
 
+    /// Adds a slice of values to the window.
+    ///
+    /// Only use this method if you don't care about the ejected values (or only care about the last
+    /// one.)
+    ///
+    /// # Returns
+    ///
+    /// - `Some(T)`: when a value is ejected **(only the last value)**
+    /// - `None`: when the window isn't at capacity
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -100,6 +149,10 @@ where
         last
     }
 
+    /// Gets the capacity.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -113,6 +166,12 @@ where
         N
     }
 
+    /// Gets the current length.
+    ///
+    /// `length()` will never exceed `capacity()`.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -127,6 +186,10 @@ where
         self.len
     }
 
+    /// ...
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -145,6 +208,10 @@ where
         self.idx
     }
 
+    /// Gets a reference to the (newest) value at the front of the window.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -154,7 +221,7 @@ where
     /// ```
     #[inline]
     pub fn front(&self) -> &T {
-        assert!(self.len > 0);
+        assert!(self.len > 0); // is this assertion necessary?
 
         if self.len < N {
             &self.buf[0]
@@ -163,6 +230,10 @@ where
         }
     }
 
+    /// Gets a reference to the (oldest) value at the back of the window.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -172,7 +243,7 @@ where
     /// ```
     #[inline]
     pub fn back(&self) -> &T {
-        assert!(self.len > 0);
+        assert!(self.len > 0); // why is this here?
 
         if self.len < N {
             &self.buf[self.len - 1]
@@ -181,6 +252,11 @@ where
         }
     }
 
+    /// Get a value at a specific index. When the provided index is larger than the window capacity,
+    /// it will wrap around.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -188,7 +264,9 @@ where
     ///
     /// let mut sliding_window = SlidingWindow::<_, 4>::from_slice(&slice).unwrap();
     ///
-    /// assert_eq!(*sliding_window.at(1), slice[4]);
+    /// // the window's internal buffer should now look like [99, 101, 104, 105]
+    ///
+    /// assert_eq!(*sliding_window.at(5), slice[4]);
     /// ```
     #[inline]
     pub fn at(&self, index: usize) -> &T {
@@ -203,6 +281,10 @@ where
         }
     }
 
+    /// ...
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use ferrous_ta::*;
     ///
@@ -236,6 +318,12 @@ where
     }
 }
 
+/// ...
+///
+/// # ConstParams
+///
+/// - `N`: Maximum amount of elements the accumulator can hold
+///
 pub struct Accumulator<T, const N: usize> {
     sliding_window: SlidingWindow<T, N>,
     sum: T,
@@ -246,6 +334,19 @@ impl<T, const N: usize> Accumulator<T, N>
 where
     T: Copy + Add<Output = T> + Sub<Output = T>,
 {
+    /// Creates a new instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `nil`: A fill value to use when initializing the buffer
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ferrous_ta::*;
+    ///
+    /// let acc = Accumulator::<_, 5>::new(0);
+    /// ```
     pub fn new(nil: T) -> Self {
         Self {
             sliding_window: SlidingWindow::new(nil),
@@ -254,6 +355,9 @@ where
         }
     }
 
+    ///
+    /// # Returns
+    /// -
     #[inline]
     pub fn push(&mut self, value: T) -> Option<T> {
         if let Some(prev) = self.sliding_window.push(value) {

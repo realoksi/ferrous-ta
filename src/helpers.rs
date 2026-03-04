@@ -15,7 +15,7 @@ pub(crate) fn get_tr<T: Copy + PartialOrd + Sub<Output = T>>(high: T, low: T, pr
     partial_max2(high, prev_close) - partial_min2(low, prev_close)
 }
 
-/// ...
+/// A generic, fixed-size circular buffer.
 ///
 /// # ConstParams
 ///

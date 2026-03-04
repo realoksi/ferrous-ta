@@ -19,8 +19,17 @@ pub(crate) fn get_tr<T: Copy + PartialOrd + Sub<Output = T>>(high: T, low: T, pr
 ///
 /// # ConstParams
 ///
-/// - `N`: Maximum amount of elements the window can hold
+/// - `N`: Maximum amount of elements the sliding window can hold
 ///
+/// # Examples
+///
+/// ```
+/// use ferrous_ta::*;
+///
+/// let mut sliding_window = SlidingWindow::<_, 3>::new(0);
+///
+/// sliding_window.push_many(&[41, 24, 80]);
+/// ```
 pub struct SlidingWindow<T, const N: usize> {
     buf: [T; N],
     idx: usize,

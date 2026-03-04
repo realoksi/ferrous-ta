@@ -44,7 +44,7 @@ where
     ///
     /// # Parameters
     ///
-    /// - `nil`: A fill value to use when initializing the buffer.
+    /// - `nil`: An empty value of type `T` to initialize the buffer
     ///
     /// # Examples
     ///

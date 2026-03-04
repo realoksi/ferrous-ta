@@ -51,7 +51,7 @@ where
     /// ```
     /// use ferrous_ta::*;
     ///
-    /// let sliding_window = SlidingWindow::<_, 12>::new(0.0);
+    /// let sliding_window = SlidingWindow::<_, 12>::new(0);
     /// ```
     pub fn new(nil: T) -> Self {
         assert!(N > 0);

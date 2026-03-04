@@ -98,12 +98,18 @@ where
         })
     }
 
-    /// Adds a value to the window, or ejects and replaces a value when the window is full.
+    /// Writes a new value to the sliding window.
+    ///
+    /// When the window is at capacity, the oldest value is ejected and replaced.
+    ///
+    /// # Parameters
+    ///
+    /// - `value`: A value to insert into the window
     ///
     /// # Returns
     ///
-    /// - `Some(T)`: when a value is ejected
-    /// - `None`: when the window isn't at capacity
+    /// - `Some(T)`: An ejected value
+    /// - `None`: Window hasn't reached its capacity yet
     ///
     /// # Examples
     ///
@@ -112,9 +118,9 @@ where
     ///
     /// let mut sliding_window = SlidingWindow::<_, 2>::new(0.0);
     ///
-    /// assert_eq!(None, sliding_window.push(16.5)); // no ejection
-    /// assert_eq!(None, sliding_window.push(20.0)); // no ejection
-    /// assert_eq!(Some(16.5), sliding_window.push(21.0)); // ejection
+    /// assert_eq!(None, sliding_window.push(16.5));
+    /// assert_eq!(None, sliding_window.push(20.0));
+    /// assert_eq!(Some(16.5), sliding_window.push(21.0));
     /// ```
     #[inline]
     pub fn push(&mut self, value: T) -> Option<T> {

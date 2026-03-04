@@ -63,25 +63,27 @@ where
         }
     }
 
-    /// Creates a new instance from a slice reference.
-    ///
-    /// Length of `slice` must be at least `N`, or else this method will return `None`.
+    /// Creates a new instance from a slice.
     ///
     /// # Parameters
     ///
-    /// - `slice`: A slice reference to initialize from.
+    /// - `slice`: A slice reference to initialize from
     ///
     /// # Returns
     ///
-    /// - `Self`: when a new instance was successfully initialized
-    /// - `None`: when there aren't enough slice values to initialize from
+    /// - `Some(Self)`: A new instance was successfully initialized
+    /// - `None`: Not enough items in `slice` (`slice.len() < N`)
     ///
     /// # Examples
+    ///
+    /// Create a new sliding window with a capacity of 3 items, from an existing slice.
     ///
     /// ```
     /// use ferrous_ta::*;
     ///
-    /// let mut sliding_window = SlidingWindow::<_, 3>::from_slice(&[3, 6, 12, 24]).unwrap();
+    /// let slice = [10, 15, 20, 25];
+    ///
+    /// let sliding_window = SlidingWindow::<_, 3>::from_slice(&slice); // 10 is discarded
     /// ```
     #[inline]
     pub fn from_slice(slice: &[T]) -> Option<Self> {

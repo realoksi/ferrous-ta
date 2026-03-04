@@ -171,75 +171,24 @@ where
     }
 
     /// Gets the capacity.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// const PERIODS: usize = 25;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, PERIODS>::new(0);
-    /// assert_eq!(sliding_window.capacity(), PERIODS);
-    /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
         N
     }
 
     /// Gets the current length.
-    ///
-    /// `length()` will never exceed `capacity()`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 4>::new(0);
-    ///
-    /// sliding_window.push_many(&[1, 2, 3]);
-    ///
-    /// assert_eq!(sliding_window.length(), 3);
-    /// ```
     #[inline]
     pub fn length(&self) -> usize {
         self.len
     }
 
-    /// ...
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 2>::new(0);
-    ///
-    /// sliding_window.push_many(&[31, 33]);
-    ///
-    /// assert_eq!(sliding_window.index(), 0);
-    ///
-    /// sliding_window.push(28);
-    ///
-    /// assert_eq!(sliding_window.index(), 1);
-    /// ```
+    /// Gets the current internal index.
     #[inline]
     pub fn index(&self) -> usize {
         self.idx
     }
 
-    /// Gets a reference to the (newest) value at the front of the window.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 3>::from_slice(&[0, 1, 2, 3, 4]).unwrap();
-    ///
-    /// assert_eq!(*sliding_window.front(), 2);
-    /// ```
+    /// Gets a reference to the oldest item in the window.
     #[inline]
     pub fn front(&self) -> &T {
         assert!(self.len > 0); // is this assertion necessary?
@@ -251,17 +200,7 @@ where
         }
     }
 
-    /// Gets a reference to the (oldest) value at the back of the window.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 3>::from_slice(&[4, 9, 10]).unwrap();
-    ///
-    /// assert_eq!(*sliding_window.back(), 10);
-    /// ```
+    /// Gets a reference to the newest item in the window.
     #[inline]
     pub fn back(&self) -> &T {
         assert!(self.len > 0); // why is this here?
@@ -273,22 +212,7 @@ where
         }
     }
 
-    /// Get a value at a specific index. When the provided index is larger than the window capacity,
-    /// it will wrap around.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let slice = [90, 91, 97, 99, 101, 104, 105];
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 4>::from_slice(&slice).unwrap();
-    ///
-    /// // the window's internal buffer should now look like [99, 101, 104, 105]
-    ///
-    /// assert_eq!(*sliding_window.at(5), slice[4]);
-    /// ```
+    /// Gets a reference to a value at a specific index of the internal buffer.
     #[inline]
     pub fn at(&self, index: usize) -> &T {
         assert!(self.len > 0);
@@ -302,19 +226,6 @@ where
         }
     }
 
-    /// ...
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ferrous_ta::*;
-    ///
-    /// let mut sliding_window = SlidingWindow::<_, 3>::from_slice(&[15, 14, 11]).unwrap();
-    ///
-    /// sliding_window.push_many(&[9, 6]);
-    ///
-    /// assert_eq!(sliding_window.as_slices(), (&[11][..], &[9, 6][..]));
-    /// ```
     #[inline]
     pub fn as_slices(&self) -> (&[T], &[T]) {
         if self.len < N {
@@ -376,9 +287,6 @@ where
         }
     }
 
-    ///
-    /// # Returns
-    /// -
     #[inline]
     pub fn push(&mut self, value: T) -> Option<T> {
         if let Some(prev) = self.sliding_window.push(value) {

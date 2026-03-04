@@ -137,15 +137,18 @@ where
         }
     }
 
-    /// Adds a slice of values to the window.
+    /// Loops over a slice of values and pushes each to the sliding window.
     ///
-    /// Only use this method if you don't care about the ejected values (or only care about the last
-    /// one.)
+    /// **Only the last ejected value is returned.**
+    ///
+    /// # Parameters
+    ///
+    /// - `values`: A slice of values to insert into the window
     ///
     /// # Returns
     ///
-    /// - `Some(T)`: when a value is ejected **(only the last value)**
-    /// - `None`: when the window isn't at capacity
+    /// - `Some(T)`: The last ejected value
+    /// - `None`: Window hasn't reached its capacity yet
     ///
     /// # Examples
     ///
@@ -153,7 +156,8 @@ where
     /// use ferrous_ta::*;
     ///
     /// let mut sliding_window = SlidingWindow::<_, 2>::new(0.0);
-    /// assert_eq!(Some(12.7), sliding_window.push_many(&[12.7, 13.6, 14.5]));
+    ///
+    /// assert_eq!(Some(16.5), sliding_window.push_many(&[16.5, 20.0, 21.0]));
     /// ```
     #[inline]
     pub fn push_many(&mut self, values: &[T]) -> Option<T> {

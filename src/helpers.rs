@@ -250,7 +250,7 @@ where
     }
 }
 
-/// ...
+/// An object for maintaining a rolling sum.
 ///
 /// # ConstParams
 ///
@@ -270,14 +270,14 @@ where
     ///
     /// # Parameters
     ///
-    /// - `nil`: A fill value to use when initializing the buffer
+    /// - `nil`: An empty value of type `T` to initialize the buffer
     ///
     /// # Examples
     ///
     /// ```
     /// use ferrous_ta::*;
     ///
-    /// let acc = Accumulator::<_, 5>::new(0);
+    /// let acc = Accumulator::<_, 3>::new(0);
     /// ```
     pub fn new(nil: T) -> Self {
         Self {

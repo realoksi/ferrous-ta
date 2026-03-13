@@ -429,7 +429,7 @@ where
         let w2 = self.wma_2.step(value);
 
         if let (Some(w1), Some(w2)) = (w1, w2) {
-            let raw_hma = (self.two_t * w1) - w2;
+            let raw_hma = (self.two_t * w2) - w1;
 
             self.wma_3.step(raw_hma)
         } else {

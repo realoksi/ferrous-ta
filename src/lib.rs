@@ -277,7 +277,6 @@ where
 /// # Weighted moving average
 pub struct WMA<T, const N: usize> {
     sliding_window: SlidingWindow<T, N>,
-    divisor: T,
     rolling_sum: T,
     rolling_weighted_sum: T,
     zero: T,
@@ -295,7 +294,6 @@ where
 
         Self {
             sliding_window: SlidingWindow::new(zero),
-            divisor: T::from(2) / (n * (n + T::from(1))),
             rolling_sum: zero,
             rolling_weighted_sum: zero,
             zero,
@@ -309,31 +307,29 @@ where
     T: Scalar,
 {
     type Input = T;
-    type Output = Option<T>;
+    type Output = T;
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
         if let Some(prev) = self.sliding_window.push(value) {
             self.rolling_weighted_sum =
                 self.rolling_weighted_sum - self.rolling_sum + value * self.n;
-            self.rolling_sum = self.rolling_sum - prev + value;
 
-            Some(self.rolling_weighted_sum * self.divisor)
+            self.rolling_sum = self.rolling_sum - prev + value;
         } else {
             self.rolling_sum = self.rolling_sum + value;
+
             self.rolling_weighted_sum = self.zero;
 
             for i in 0..self.sliding_window.length() {
-                self.rolling_weighted_sum = self.rolling_weighted_sum
-                    + *self.sliding_window.at(i) * T::from((i + 1) as i32);
-            }
-
-            if self.sliding_window.length() < N {
-                None
-            } else {
-                Some(self.rolling_weighted_sum * self.divisor)
+                self.rolling_weighted_sum = self.rolling_weighted_sum +
+                    *self.sliding_window.at(i) * T::from((i + 1) as i32);
             }
         }
+
+        let len = T::from(self.sliding_window.length() as i32);
+
+        self.rolling_weighted_sum * (T::from(2) / (len * (len + T::from(1))))
     }
 
     #[inline]
@@ -416,25 +412,21 @@ where
 }
 
 impl<T, const N: usize, const N_HALF: usize, const N_SQRT: usize> Filter
-    for HMA<T, N, N_HALF, N_SQRT>
+for HMA<T, N, N_HALF, N_SQRT>
 where
     T: Scalar,
 {
     type Input = T;
-    type Output = Option<T>;
+    type Output = T;
 
     #[inline]
     fn step(&mut self, value: Self::Input) -> Self::Output {
         let w1 = self.wma_1.step(value);
         let w2 = self.wma_2.step(value);
 
-        if let (Some(w1), Some(w2)) = (w1, w2) {
-            let raw_hma = (self.two_t * w1) - w2;
+        let raw_hma = (self.two_t * w2) - w1;
 
-            self.wma_3.step(raw_hma)
-        } else {
-            None
-        }
+        self.wma_3.step(raw_hma)
     }
 
     #[inline]
